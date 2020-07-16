@@ -1,0 +1,143 @@
+---
+title: "College Major and Income"
+author: "Anshu"
+date: "7/16/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(scales)
+theme_set(theme_light())
+```
+
+```{r}
+recent_grads <- read.csv('Data/recent-grads.csv')
+
+majors_formatted <- recent_grads %>% 
+  arrange(desc(Median)) %>% 
+  mutate(Major = str_to_title(Major), #Using str_to_title to convert title case to sentence case 
+         Major = fct_reorder(Major, Median)) #Reordering majors based on the descending values of their Median sal
+  
+```
+
+
+### What are the most common majors?
+
+What are the most common major categories (Eg: Business, Engineering, Arts)?
+
+```{r}
+majors_formatted %>% 
+  count(Major_category, wt = Total, sort = T) %>%  #wt = total would multiply the no. of major categories by the number in each major
+  mutate(Major_category = fct_reorder(Major_category, n)) %>% 
+  ggplot(aes(Major_category, n, fill = Major_category)) + 
+  geom_col() + 
+  coord_flip() + 
+  labs(x = "", 
+       y = 'Total Number of Graduates', 
+       title = 'The Most Common Major Categories') + 
+  theme(legend.position = 'none') 
+
+```
+
+
+What are the most common *majors*? (Since there are 173, we aren't going to show them all)
+
+```{r}
+majors_formatted %>% 
+  mutate(Major = fct_reorder(Major, Total)) %>% 
+  arrange(desc(Total)) %>%
+  head(20) %>% 
+  ggplot(aes(Major, Total, fill = Major_category)) + 
+  geom_col() + 
+  coord_flip() + 
+  labs(x = "", 
+       y = 'Total Number of Graduates', 
+       title = 'The Most Common Majors') +
+  scale_y_continuous(labels = comma_format())
+```
+
+
+
+### What categories of majors earn the most? 
+
+```{r}
+majors_formatted %>% 
+  mutate(Major_category = fct_reorder(Major_category, Median)) %>%
+  ggplot(aes(Major_category ,Median)) +
+  geom_boxplot() + 
+  scale_y_continuous(labels = dollar_format()) + 
+  coord_flip() + 
+  labs(title = 'Major Categories and their respective earnings',
+       x = '',
+       y = 'Median Salary in $')
+```
+
+```{r}
+majors_formatted %>% 
+  group_by(Major_category) %>%
+  summarise(Median = median(Median)) %>% 
+  mutate(Major_category = fct_reorder(Major_category, Median)) %>%
+  ggplot(aes(Major_category ,Median)) +
+  geom_col() + 
+  scale_y_continuous(labels = dollar_format()) + 
+  coord_flip() + 
+  labs(title = 'Major Categories and their respective earnings',
+       x = '',
+       y = 'Median Salary in $')
+```
+
+
+### What are the highest earning majors across all categories?
+
+```{r}
+majors_formatted %>%  
+  filter(Sample_size >=100) %>% 
+  head(20) %>%
+  ggplot(aes(Major ,Median, color = Major_category)) +
+  geom_point() + 
+  expand_limits(y = 0) + #Including 0 in the Median Salary axis 
+  geom_errorbar(aes(ymin = P25th, ymax = P75th)) + # Used to include the 25th and 75th percentiles 
+  scale_y_continuous(labels = dollar_format()) + 
+  coord_flip() + 
+  labs(title = 'Highest Earning Majors',
+       subtitle = 'Top 20 majors where more than 100 graduates were surveyed. Bars represent the 25th and 75th Percentiles',
+       x = '',
+       y = 'Median Salary in $')
+```
+
+
+### What are the lowest earning majors across all categories 
+
+```{r}
+majors_formatted %>%   
+  tail(20) %>%
+  ggplot(aes(Major ,Median, color = Major_category)) +
+  geom_point() + 
+  expand_limits(y = 0) + #Including 0 in the Median Salary axis 
+  geom_errorbar(aes(ymin = P25th, ymax = P75th)) + # Used to include the 25th and 75th percentiles 
+  scale_y_continuous(labels = dollar_format()) + 
+  coord_flip() + 
+  labs(title = 'Lowest Earning Majors',
+       subtitle = 'Top 20 majors where more than 100 graduates were surveyed',
+       x = '',
+       y = 'Median Salary in $')
+```
+
+
+### To study the sample size of different majors 
+
+
+```{r}
+majors_formatted %>% 
+  ggplot(aes(Sample_size, Median)) +
+  geom_point() + 
+  geom_text(aes(label = Major), check_overlap = T, vjust = 1, hjust = 1) + # To add text to the points based on the majors
+  scale_x_log10() + 
+  scale_y_continuous(labels = dollar_format())
+```
+
